@@ -77,7 +77,7 @@ class SmartSQL:
 		cursor.execute(output)
 		try:
 			result = cursor.fetchall()
-		except oracledb.InterfaceError:
+		except oracledb.InterfaceError: # No result needed – .fetchall() fails
 			result = []
 
 		cursor.close()
