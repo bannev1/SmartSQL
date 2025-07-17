@@ -30,7 +30,7 @@ else:
 
 # START QUERIES
 # Create instance of SmartSQL class
-exp = SmartSQL(settings, envPath=ENV_PATH, debug=True)
+exp = SmartSQL(settings, envPath=ENV_PATH)
 
 
 # For validation later, get all tables available
