@@ -8,7 +8,7 @@ from settingsManager import findTable
 
 
 class SmartSQL:
-	def __init__(self, settings: dict, envPath: str = 'env_data.env', debug: bool = False, **kwargs) -> None:
+	def __init__(self, settings: dict, envPath: str = 'env_data.env', confirmExecute: bool = True, **kwargs) -> None:
 		"""
 		Create an instance of the SmartSQL class to create and run queries
 		
@@ -17,7 +17,7 @@ class SmartSQL:
 		Args:
 			settings (dict): A dictionary corresponding to the structure of settings.json. See the README or settingsManager.py for more information.
 			envPath (str): Path to the .env file storing the connection string and API key(Optional)
-			debug (bool): Whether to enable development mode. Will essentially output information and ask for confirmation before executing SQL queries.
+			confirmExecute (bool): Will essentially decide if need to output information and ask for confirmation before executing SQL queries.
 		"""
 
 		kwargs = defaultdict(str, kwargs)
@@ -46,14 +46,14 @@ class SmartSQL:
 		self.settings = settings	
 
 		# Set other attributes
-		self.debug = debug
+		self.debug = confirmExecute
 		self.SQLflavor = settings['SQL_Flavor']
 		self.name = settings['Server_Name']
 		self.description = settings['Server_Description']
 
 
 
-	def query(self, query: str, table: list[str] = None, withBacklog: bool = True) -> list:
+	def query(self, query: str, table: list[str] = None, withBacklog: bool = True, confirmExecute: bool = None) -> list:
 		"""
 		Given query and table will execute database
 
@@ -61,6 +61,7 @@ class SmartSQL:
 			query (str): Natural language prompt of what the user wants the model to do
 			table (list[str]): References to keys of the tableLayout dictionary so the model can understand which tables to reference. If None, default passes all
 			withBacklog (bool): If needs to maintain history of past changes
+			confirmExecute (bool): Whether to override original confirmExecute attribute
 		"""
 
 		# Base explanation to AI for prompt
@@ -83,8 +84,8 @@ class SmartSQL:
 		# Return SQL prompt from AI
 		result = self.ai.prompt(serverExplanation + basePrompt, query)
 
-		# If in debug mode, ask before immediately executing code
-		if self.debug:
+		# If in confirmExecute mode, ask before immediately executing code
+		if (self.debug and confirmExecute == None) or confirmExecute:
 			print(result)
 			if 'y' not in input("\nExecute? [Y/N] ").lower():
 				self.ai.backlog.pop() # Remove record from being included in backlog
