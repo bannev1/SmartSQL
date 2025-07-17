@@ -35,7 +35,7 @@ class Prompter:
 		self.backlog = []
 
 
-	def prompt(self, basePrompt: str, query: str, temperature: float = 0.8, maxTokens: int = 5000, updateBacklog: bool = True) -> str:
+	def prompt(self, basePrompt: str, query: str, updateBacklog: bool = True, **kwargs) -> str:
 		"""
 		Helper method to prompt the query to the AI model. Returns result as a string.
 
@@ -43,6 +43,7 @@ class Prompter:
 			basePrompt (str): System prompt
 			query (str): User prompt
 			updateBacklog (bool): If need to add record to backlog
+			**kwargs: Any arguments needed to pass into .create() for AI
 		"""
 
 		# Prompt GPT
@@ -58,8 +59,7 @@ class Prompter:
 						"content": query
 					}
 				],
-			temperature = temperature,
-			max_tokens = maxTokens
+			**kwargs
 		)
 
 		result = response.choices[0].message.content
