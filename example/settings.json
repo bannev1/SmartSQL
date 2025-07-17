@@ -9,21 +9,50 @@
             "Layout": [ // List of all fields/columns in table
                 {
                     "Name": "Field 1 Name",
-                    "Type": "Field 1 Type",
+                    "Type": "String",
                     "Description": "Explanation of what field 1 is for/contains",
                     "Properties": {
                         "isPrimaryKey": true,
-                        "ForeignReference": "",
-                        "Constraints": "NOT NULL"
+                        "Foreign_Reference": "",
+                        "Constraints": ["NOT NULL"]
                     }
                 },
+
                 {
                     "Name": "Field 2 Name",
-                    "Type": "Field 2 Type",
+                    "Type": "Boolean",
                     "Description": "Explanation of what field 2 is for/contains",
                     "Properties": {
                         "isPrimaryKey": false,
-                        "ForeignReference": "Table 2 Name",
+                        "Foreign_Reference": "Table 2 Name",
+                        "Constraints": ""
+                    }
+                }
+            ]
+        },
+
+        {
+            "Name": "Table 2 Name",
+            "Description": "Table 2 Description",
+            "Layout": [
+                {
+                    "Name": "Field 1 Name",
+                    "Type": "Integer",
+                    "Description": "Explanation of what field 1 is for/contains",
+                    "Properties": {
+                        "isPrimaryKey": true,
+                        "Foreign_Reference": "",
+                        "Constraints": ["NOT NULL"]
+                    }
+                },
+
+                {
+                    "Name": "Field 2 Name",
+                    "Type": "VARCHAR2(50)",
+                    "Description": "Explanation of what field 2 is for/contains",
+                    "Properties": {
+                        "isPrimaryKey": false,
+                        "Foreign_Reference": "",
                         "Constraints": ""
                     }
                 }
