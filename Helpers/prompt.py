@@ -32,14 +32,17 @@ class Prompter:
 
 		self.deploymentName = APIkeys['AZURE_OPENAI_DEPLOYMENT_NAME']
 
+		self.backlog = []
 
-	def prompt(self, basePrompt: str, query: str, temperature: float = 0.8, maxTokens: int = 5000) -> str:
+
+	def prompt(self, basePrompt: str, query: str, temperature: float = 0.8, maxTokens: int = 5000, updateBacklog: bool = True) -> str:
 		"""
 		Helper method to prompt the query to the AI model. Returns result as a string.
 
 		Args:
 			basePrompt (str): System prompt
 			query (str): User prompt
+			updateBacklog (bool): If need to add record to backlog
 		"""
 
 		# Prompt GPT
@@ -59,4 +62,17 @@ class Prompter:
 			max_tokens = maxTokens
 		)
 
-		return response.choices[0].message.content
+		result = response.choices[0].message.content
+
+		# Update backlog
+		if updateBacklog:
+			self.backlog.append(result)
+
+		return result
+	
+	def clearBacklog(self) -> None:
+		"""
+		Clear backlog list
+		"""
+
+		self.backlog = []

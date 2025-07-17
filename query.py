@@ -53,18 +53,19 @@ class SmartSQL:
 
 
 
-	def query(self, query: str, table: list[str] = None) -> list:
+	def query(self, query: str, table: list[str] = None, withBacklog: bool = True) -> list:
 		"""
 		Given query and table will execute database
 
 		Args:
 			query (str): Natural language prompt of what the user wants the model to do
 			table (list[str]): References to keys of the tableLayout dictionary so the model can understand which tables to reference. If None, default passes all
+			withBacklog (bool): If needs to maintain history of past changes
 		"""
 
 		# Base explanation to AI for prompt
 		serverExplanation = f"My database {self.name} is {self.description}. I am using {self.SQLflavor}. Help give solely SQL code to complete the query from the user. Do not output anything other than SQL code and do NOT put it in a code block and do NOT add comments. Just raw text.\n"
-		
+
 		# Set conditional part of prompt
 		if table != None:
 			tables = [findTable(self.settings, i) for i in table]
@@ -74,6 +75,11 @@ class SmartSQL:
 		else:
 			basePrompt = f"The following is the structure of the full database:\n{json.dumps(self.settings, indent='\t')}"
 
+		# Check if need to include command history
+		if withBacklog:
+			if len(self.ai.backlog) > 0:
+				basePrompt += f"\n\nPlease note that the following commands have been executed to the database description aforementioned, meaning you need to consider the following changes/commands to have taken effect before writing your SQL code:\n{'\n'.join(self.ai.backlog)}"
+
 		# Return SQL prompt from AI
 		result = self.ai.prompt(serverExplanation + basePrompt, query)
 
@@ -81,7 +87,20 @@ class SmartSQL:
 		if self.debug:
 			print(result)
 			if 'y' not in input("\nExecute? [Y/N] ").lower():
+				self.ai.backlog.pop() # Remove record from being included in backlog
 				return
 		
 		# Execute SQL code and return value/list/result
 		return self.db.execute(result)
+
+	def updateSettings(self, newSettings: dict) -> None:
+		"""
+		Updates settings and clears backlog
+
+		Args:
+			newSettings (dict): New settings/server configuration to replace old one
+		"""
+
+		# Updating settings meaning backlog is no longer accurate
+		self.settings = newSettings
+		self.ai.clearBacklog()
