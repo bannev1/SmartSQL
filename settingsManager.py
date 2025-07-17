@@ -50,7 +50,7 @@ def settingsFromDBPath(flavor: str, envPath: str = 'env_data.env') -> dict:
         }
     )
 
-# NOTE: Might have to modify this if using other database provider (not Oracle Database)
+# NOTE: Might have to modify this if using other database provider
 def settingsFromDB(flavor: str, connection: dict[str]) -> dict:
     """
     Generate settings from database directly with AI. 
@@ -61,72 +61,124 @@ def settingsFromDB(flavor: str, connection: dict[str]) -> dict:
         flavor (str): SQL flavor. Currently only 'oracle' or 'postgres' available
         connection (dict[str]): Connection properties. See README for exact structure
     """
-
+    
     # Connect DB
     db = Database(connection, flavor)
 
-    # Get all tables
-    tableNames = db.execute("SELECT table_name FROM dba_tables;")
-
     tables = []
 
-    # Get all fields
-    for tableName in tableNames:
-        table = {
-            'Name': tableName,
-            'Description': ''
-        }
-
-        layout = []
-
-        # Get fields
-        fields = db.execute(f"SELECT column_name, data_type FROM all_tab_cols WHERE table_name = '{tableName}';")[0]
-
-        # Get primary key - From https://stackoverflow.com/questions/9016578/how-to-get-primary-key-column-in-oracle
-        primaryKey = db.execute(f"""SELECT column_name FROM all_cons_columns WHERE constraint_name = (
-                                    SELECT constraint_name FROM all_constraints 
-                                    WHERE UPPER(table_name) = UPPER('{tableName}') AND CONSTRAINT_TYPE = 'P'
-                                );""")[0][0]
-
-        # Look through fields/columns within table
-        for field in fields:
-            struct = {
-                'Name': field[0],
-                'Type': field[1],
-                'Description': '',
-            }
-
-            constraints = db.execute(f"SELECT constraint_type FROM all_constraints WHERE table_name = '{tableName}';")
-
-            properties = {
-                'isPrimaryKey': struct['Name'].strip() == primaryKey.strip(),
-                'Foreign_Reference': '',
-                'Constraints': []
-            }
-
-            # Get constraints
-            for constraint in constraints:
-                constraintType = constraint[0]
-
-                # Skip if defining primary key
-                if constraintType == 'P':
-                    continue
-
-                properties["Constraints"].append(constraintType)
-            
-            struct['Properties'] = properties
-            layout.append(struct)
+    if flavor.lower() == 'oracle':
+        # Oracle-specific queries
+        tableNames = db.execute("SELECT table_name FROM dba_tables;")
         
-        # Add
-        table['Layout'] = layout
+        for tableName in tableNames:
+            table = {
+                'Name': tableName,
+                'Description': ''
+            }
+            layout = []
+            
+            fields = db.execute(f"SELECT column_name, data_type FROM all_tab_cols WHERE table_name = '{tableName}';")[0]
+            
+            primaryKey = db.execute(f"""SELECT column_name FROM all_cons_columns WHERE constraint_name = (
+                                        SELECT constraint_name FROM all_constraints 
+                                        WHERE UPPER(table_name) = UPPER('{tableName}') AND CONSTRAINT_TYPE = 'P'
+                                    );""")[0][0]
 
-        tables.append(table)
-    
-    # Set structure
+            for field in fields:
+                struct = {
+                    'Name': field[0],
+                    'Type': field[1],
+                    'Description': '',
+                }
+
+                constraints = db.execute(f"SELECT constraint_type FROM all_constraints WHERE table_name = '{tableName}';")
+
+                properties = {
+                    'isPrimaryKey': struct['Name'].strip() == primaryKey.strip(),
+                    'Foreign_Reference': '',
+                    'Constraints': []
+                }
+
+                for constraint in constraints:
+                    constraintType = constraint[0]
+                    if constraintType == 'P':
+                        continue
+                    properties["Constraints"].append(constraintType)
+                
+                struct['Properties'] = properties
+                layout.append(struct)
+            
+            table['Layout'] = layout
+            tables.append(table)
+
+    elif flavor.lower() == 'postgres':
+        # PostgreSQL-specific queries
+        tableNames = db.execute("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+            AND table_type = 'BASE TABLE';
+        """)
+        
+        for tableName in tableNames:
+            table = {
+                'Name': tableName[0],  # PostgreSQL returns tuples
+                'Description': ''
+            }
+            layout = []
+            
+            # Get columns and data types
+            fields = db.execute(f"""
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name = '{tableName[0]}';
+            """)
+            
+            # Get primary key
+            primaryKey = db.execute(f"""
+                SELECT a.attname
+                FROM pg_index i
+                JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                WHERE i.indrelid = '{tableName[0]}'::regclass
+                AND i.indisprimary;
+            """)
+            pk_column = primaryKey[0][0] if primaryKey else None
+            
+            for field in fields:
+                struct = {
+                    'Name': field[0],
+                    'Type': field[1],
+                    'Description': '',
+                }
+
+                # Get constraints for this column
+                constraints = db.execute(f"""
+                    SELECT constraint_type 
+                    FROM information_schema.table_constraints
+                    WHERE table_name = '{tableName[0]}'
+                    AND constraint_type != 'PRIMARY KEY';
+                """)
+
+                properties = {
+                    'isPrimaryKey': struct['Name'].strip() == pk_column.strip() if pk_column else False,
+                    'Foreign_Reference': '',
+                    'Constraints': [c[0] for c in constraints]
+                }
+                
+                struct['Properties'] = properties
+                layout.append(struct)
+            
+            table['Layout'] = layout
+            tables.append(table)
+
+    else:
+        raise ValueError(f"Unsupported SQL flavor: {flavor}")
+
     settings = {
         'Server_Name': '',
         'Server_Description': '',
-        'SQL_Flavor': 'Oracle Database',
+        'SQL_Flavor': flavor.capitalize(),
         'Tables': tables
     }
 
