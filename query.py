@@ -92,7 +92,13 @@ class SmartSQL:
 				return
 		
 		# Execute SQL code and return value/list/result
-		return self.db.execute(result)
+		result = self.db.execute(result)
+
+		# If no result, return empty list
+		if result == None:
+			return []
+		
+		return result
 
 	def updateSettings(self, newSettings: dict) -> None:
 		"""

@@ -210,7 +210,7 @@ def getAllTables(settings: dict) -> list[str]:
 
 # EXAMPLE SETTINGS/TEMPLATE
 EXAMPLE_SETTINGS = {
-	"Server_Name": "My Server",
+	"Server_Name": "My_Server",
 	"Server_Description": "Brief Server Description",
 	"SQL_Flavor": "Oracle Database",
 	"Tables": [
