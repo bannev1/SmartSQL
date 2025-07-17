@@ -42,6 +42,7 @@ def settingsFromDB(envPath: str = 'env_data.env') -> dict:
         }
     )
 
+# NOTE: Might have to modify this if using other database provider (not Oracle Database)
 def settingsFromDB(connection: dict[str]) -> dict:
     """
     Generate settings from database directly with AI. 
@@ -69,17 +70,58 @@ def settingsFromDB(connection: dict[str]) -> dict:
 
         layout = []
 
+        # Get fields
         fields = db.execute(f"SELECT column_name, data_type FROM all_tab_cols WHERE table_name = '{tableName}';")[0]
 
+        # Get primary key - From https://stackoverflow.com/questions/9016578/how-to-get-primary-key-column-in-oracle
+        primaryKey = db.execute(f"""SELECT column_name FROM all_cons_columns WHERE constraint_name = (
+                                    SELECT constraint_name FROM all_constraints 
+                                    WHERE UPPER(table_name) = UPPER('{tableName}') AND CONSTRAINT_TYPE = 'P'
+                                );""")[0]['column_name']
+
+        # Look through fields/columns within table
         for field in fields:
             struct = {
                 'Name': field['column_name'],
                 'Type': field['data_type'],
-                'Description': ''
+                'Description': '',
             }
 
+            constraints = db.execute(f"SELECT constraint_type FROM all_constraints WHERE table_name = '{tableName}';")
+
+            properties = {
+                'isPrimaryKey': struct['Name'].strip() == primaryKey.strip(),
+                'Foreign_Reference': '',
+                'Constraints': []
+            }
+
+            # Get constraints
+            for constraint in constraints:
+                constraintType = constraint['constraint_type']
+
+                # Skip if defining primary key
+                if constraintType == 'P':
+                    continue
+
+                properties["Constraints"].append(constraintType)
+            
+            struct['Properties'] = properties
+            layout.append(struct)
+        
+        # Add
+        table['Layout'] = layout
 
         tables.append(table)
+    
+    # Set structure
+    settings = {
+        'Server_Name': '',
+        'Server_Description': '',
+        'SQL_Flavor': 'Oracle Database',
+        'Tables': tables
+    }
+
+    return settings
 
 
 # AI Settings
@@ -138,68 +180,98 @@ def parseSettings(settingsPath: str) -> dict:
     return json.loads(settingsPath)
 
 
+# Find table from name
+def findTable(settings: dict, tableName: str) -> dict:
+    """
+    Find table in settings given tableName, returning table dictionary
+
+    Args:
+        settings (dict): Settings dictionary
+        tableName (str): Name of table
+    """
+
+    table = [i for i in settings['Tables'] if i['Name'] == tableName][0]
+
+    return table
+
+
 
 
 # EXAMPLE SETTINGS/TEMPLATE
 EXAMPLE_SETTINGS = {
-    "Server_Name": "My Server",
-    "Server_Description": "Brief Server Description",
-    "SQL_Flavor": "Oracle Database",
-    "Tables": [
-        {
-            "Name": "Table 1 Name",
-            "Description": "Table 1 Description",
-            "Layout": [
-                {
-                    "Name": "Field 1 Name",
-                    "Type": "String",
-                    "Description": "Explanation of what field 1 is for/contains",
-                    "Properties": {
-                        "isPrimaryKey": True,
-                        "Foreign_Reference": "",
-                        "Constraints": "NOT NULL"
-                    }
-                },
+	"Server_Name": "My Server",
+	"Server_Description": "Brief Server Description",
+	"SQL_Flavor": "Oracle Database",
+	"Tables": [
+		{
+			"Name": "Table 1 Name",
+			"Description": "Table 1 Description",
+			"Layout": [
+				{
+					"Name": "Field 1 Name",
+					"Type": "String",
+					"Description": "Explanation of what field 1 is for/contains",
+					"Properties": {
+						"isPrimaryKey": True,
+						"Constraints": [
+							"NOT NULL"
+						]
+					}
+				},
 
-                {
-                    "Name": "Field 2 Name",
-                    "Type": "Boolean",
-                    "Description": "Explanation of what field 2 is for/contains",
-                    "Properties": {
-                        "isPrimaryKey": False,
-                        "Foreign_Reference": "Table 2 Name",
-                        "Constraints": ""
-                    }
-                }
-            ]
-        },
+				{
+					"Name": "Field 2 Name",
+					"Type": "Boolean",
+					"Description": "Explanation of what field 2 is for/contains",
+					"Properties": {
+						"isPrimaryKey": False,
+						"Constraints": []
+					}
+				}
+			]
+		},
 
-        {
-            "Name": "Table 2 Name",
-            "Description": "Table 2 Description",
-            "Layout": [
-                {
-                    "Name": "Field 1 Name",
-                    "Type": "Integer",
-                    "Description": "Explanation of what field 1 is for/contains",
-                    "Properties": {
-                        "isPrimaryKey": True,
-                        "Foreign_Reference": "",
-                        "Constraints": "NOT NULL"
-                    }
-                },
+		{
+			"Name": "Table 2 Name",
+			"Description": "Table 2 Description",
+			"Layout": [
+				{
+					"Name": "Field 1 Name",
+					"Type": "Integer",
+					"Description": "Explanation of what field 1 is for/contains",
+					"Properties": {
+						"isPrimaryKey": True,
+						"Constraints": [
+							"NOT NULL"
+						]
+					}
+				},
 
-                {
-                    "Name": "Field 2 Name",
-                    "Type": "VARCHAR2(50)",
-                    "Description": "Explanation of what field 2 is for/contains",
-                    "Properties": {
-                        "isPrimaryKey": False,
-                        "Foreign_Reference": "",
-                        "Constraints": ""
-                    }
-                }
-            ]
-        }
-    ]
+				{
+					"Name": "Field 2 Name",
+					"Type": "VARCHAR2(50)",
+					"Description": "Explanation of what field 2 is for/contains",
+					"Properties": {
+						"isPrimaryKey": False,
+						"Constraints": [
+							"NOT NULL",
+							"IN 'String 1', 'String 2'"
+						]
+					}
+				},
+
+				{
+					"Name": "Field 3 Name",
+					"Type": "VARCHAR2(50)",
+					"Description": "Explanation of what field 3 is for/contains",
+					"Properties": {
+						"isPrimaryKey": False,
+						"Constraints": [
+							"UNIQUE"
+						]
+					}
+				}
+			]
+		}
+	]
 }

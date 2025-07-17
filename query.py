@@ -1,22 +1,23 @@
 import os
+import json
 from collections import defaultdict
 from dotenv import load_dotenv
 
 from Helpers import Prompter, Database
+from settingsManager import findTable
 
 
 class SmartSQL:
-	def __init__(self, tableLayout: dict[str], serverDescr: str = "", envPath: str = 'env_data.env', debug: bool = False, SQLflavor: str = 'Oracle SQL', **kwargs) -> None:
+	def __init__(self, settings: dict, envPath: str = 'env_data.env', debug: bool = False, **kwargs) -> None:
 		"""
 		Create an instance of the SmartSQL class to create and run queries
 		
 		Either create a 'env_data.env' (or whatever environment file specified) file with environment variables or pass as an argument to this function
   
 		Args:
-			tableLayout (dict[str]): A dictionary with key (table name) and value (description of what it represents and an explanation of its contents) for the model to understand what each table is for.
+			settings (dict): A dictionary corresponding to the structure of settings.json. See the README or settingsManager.py for more information.
 			envPath (str): Path to the .env file storing the connection string and API key(Optional)
 			debug (bool): Whether to enable development mode. Will essentially output information and ask for confirmation before executing SQL queries.
-			SQLflavor (str): Ability for users to specify which SQL 'flavor' they're using, i.e PostgreSQL or OracleSQL.
 		"""
 
 		kwargs = defaultdict(kwargs, str)
@@ -42,14 +43,13 @@ class SmartSQL:
 		self.db = Database(apiKeys)
 
 		# Set up tables
-		self.tables = tableLayout
-
-		with open('./tables/order_general_info.sql', 'r') as file:
-			self.tables['order_general_info'] = file.read()		
+		self.settings = settings	
 
 		# Set other attributes
 		self.debug = debug
-		self.SQLflavor = SQLflavor
+		self.SQLflavor = settings['SQL_Flavor']
+		self.name = settings['Server_Name']
+		self.description = settings['Server_Description']
 
 
 
@@ -62,20 +62,20 @@ class SmartSQL:
 			table (list[str]): References to keys of the tableLayout dictionary so the model can understand which tables to reference. If None, default passes all
 		"""
 
-		# Set prompt
+		# Base explanation to AI for prompt
+		serverExplanation = f"My database {self.name} is {self.description}. I am using {self.SQLflavor}. Help give solely SQL code to complete the query from the user. Do not output anything other than SQL code.\n"
+		
+		# Set conditional part of prompt
 		if table != None:
-			basePrompt = f"""Using {self.SQLflavor}, help give solely SQL code to complete the query from the user, connecting to the table(s) named {', '.join(table)}. 
+			tables = [findTable(self.settings, i) for i in table]
+			basePrompt = f"Make sure to connect, if necessary for the task, to the table(s) named {', '.join(table)}. The following is the layout/description for each table:\n{'\n\n'.join(json.dumps(i, indent='\t') for i in tables)}"
 
-Do not output anything other than SQL code. The following is the layout/description for each table:\n{'\n\n'.join([f'{i}: {self.tables[i]}'] for i in table)}"""
-
-		# If table description not provided, give all tables and let AI decide which to use/connect to
+		# If table description not provided, give all tables/full structure and let AI decide which to use/connect to
 		else:
-			basePrompt = f"""Using {self.SQLflavor}, help give solely SQL code to complete the query from the user. 
-
-Do not output anything other than SQL code. The following is the layout/description for each table in the full database:\n{'\n\n'.join([f'{tableName}: {description}'] for tableName, description in self.tables.items())}"""
+			basePrompt = f"The following is the structure of the full database:\n{json.dumps(self.settings, indent='\t')}"
 
 		# Return SQL prompt from AI
-		result = self.ai.prompt(basePrompt, query)
+		result = self.ai.prompt(serverExplanation + basePrompt, query)
 
 		# If in debug mode, ask before immediately executing code
 		if self.debug:

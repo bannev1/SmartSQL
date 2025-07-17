@@ -1,3 +1,4 @@
+import settingsManager
 from ..query import SmartSQL
 
 tableLayout = {
