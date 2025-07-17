@@ -86,13 +86,13 @@ def settingsFromDB(flavor: str, connection: dict[str]) -> dict:
         primaryKey = db.execute(f"""SELECT column_name FROM all_cons_columns WHERE constraint_name = (
                                     SELECT constraint_name FROM all_constraints 
                                     WHERE UPPER(table_name) = UPPER('{tableName}') AND CONSTRAINT_TYPE = 'P'
-                                );""")[0]['column_name']
+                                );""")[0][0]
 
         # Look through fields/columns within table
         for field in fields:
             struct = {
-                'Name': field['column_name'],
-                'Type': field['data_type'],
+                'Name': field[0],
+                'Type': field[1],
                 'Description': '',
             }
 
@@ -106,7 +106,7 @@ def settingsFromDB(flavor: str, connection: dict[str]) -> dict:
 
             # Get constraints
             for constraint in constraints:
-                constraintType = constraint['constraint_type']
+                constraintType = constraint[0]
 
                 # Skip if defining primary key
                 if constraintType == 'P':
