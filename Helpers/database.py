@@ -1,17 +1,15 @@
-import oracledb
-
-
 # NOTE: If using different database provider, please modify this class as fit
 
 class Database:
-	def __init__(self, connection: dict[str]) -> None:
+	def __init__(self, connection: dict[str], flavor: str) -> None:
 		"""
 		Class to manage database, provided connection details
 
 		Args:
 			connection (dict[str]): Dictionary of strings containing properties of database connection string
+			flavor (str): Type of SQL - Currently only 'oracle' or 'postgres' supported
 		
-		### Example Structure of `connection`:
+		### Example Structure of `connection` for 'oracle':
 
 		```
 		{
@@ -20,13 +18,42 @@ class Database:
 			"DB_DSN" : "dbhost.example.com/mydb"
 		}
 		```
+
+		### Example Structure of `connection` for 'oracle':
+
+		```
+		{
+			"DB_USER" : "Username",
+			"DB_PASSWORD" : "Password",
+			"DB_NAME" : "Name",
+			"DB_HOST": "host.com",
+			"DB_PORT": "0000"
+		}
+		```
 		"""
 
-		self.connect = lambda: oracledb.connect(
-			user= connection['DB_USER'],
-			password= connection['DB_PASSWORD'],
-			dsn= connection['DB_DSN']
-		)
+		match flavor:
+			case 'oracle':
+				import oracledb
+				self.connect = lambda: oracledb.connect(
+					user= connection['DB_USER'],
+					password= connection['DB_PASSWORD'],
+					dsn= connection['DB_DSN']
+				)
+
+			case 'postgres':
+				import psycopg2
+				self.connect = lambda: psycopg2.connect(
+					user= connection['DB_USER'],
+					password= connection['DB_PASSWORD'],
+					dbname= connection['DB_NAME'],
+					host= connection['DB_HOST'],
+					port= connection['DB_PORT']
+				)
+			
+			case _:
+				raise ValueError("Only 'oracle' and 'postgres' flavors available at the moment.")
+
 
 	def execute(self, code: str) -> list:
 		"""
@@ -42,7 +69,7 @@ class Database:
 
 		try:
 			result = cursor.fetchall()
-		except oracledb.InterfaceError: # No result needed – .fetchall() fails
+		except Exception: # No result needed – .fetchall() fails
 			result = []
 
 		# Close connections

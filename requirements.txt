@@ -1,3 +1,4 @@
 openai
 dotenv
 oracledb
+psycog2

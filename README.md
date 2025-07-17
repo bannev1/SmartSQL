@@ -59,7 +59,7 @@ AZURE_AI_ENDPOINT = "Azure AI Endpoint"
 # Database Connection String
 DB_USER = "Username"
 DB_PASSWORD = "Password"
-DB_DSN = "dbhost.example.com/mydb"
+DB_CONN = "dbhost.example.com/mydb"
 ```
 
 *Make sure to replace the information above with your own.*
@@ -104,7 +104,7 @@ mySmartSQL = SmartSQL(settings,
                     AZURE_AI_ENDPOINT = "Azure AI Endpoint",
                     DB_USER = "Username",
                     DB_PASSWORD = "Password",
-                    DB_DSN = "dbhost.example.com/mydb"
+                    DB_CONN = "dbhost.example.com/mydb"
                     )
 ```
 

@@ -46,7 +46,7 @@ while True:
 
 	tables = None
 
-	if 'y' in input('Do you know which tables you need to access specifically? [Y/N] '):
+	if 'y' in input('Do you know which tables you need to access specifically? [Y/N] ').lower():
 		tables = [table for table in input('Please enter the tables you need separated by a comma (Capitalization is important): ').strip() if table in allTables]
 
 		print(f"Tables referenced which are available in database: {', '.join(tables)}")

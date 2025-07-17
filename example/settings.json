@@ -1,14 +1,14 @@
 {
-	"Server_Name": "My Server",
+	"Server_Name": "My_Server", 
 	"Server_Description": "Brief Server Description",
 	"SQL_Flavor": "Oracle Database",
 	"Tables": [ // List of all tables
 		{
-			"Name": "Table 1 Name",
+			"Name": "Table_1_Name",
 			"Description": "Table 1 Description",
 			"Layout": [ // List of all fields/columns in table
 				{
-					"Name": "Field 1 Name",
+					"Name": "Field_1_Name",
 					"Type": "String",
 					"Description": "Explanation of what field 1 is for/contains",
 					"Properties": {
@@ -20,7 +20,7 @@
 				},
 
 				{
-					"Name": "Field 2 Name",
+					"Name": "Field_2_Name",
 					"Type": "Boolean",
 					"Description": "Explanation of what field 2 is for/contains",
 					"Properties": {
@@ -32,11 +32,11 @@
 		},
 
 		{
-			"Name": "Table 2 Name",
+			"Name": "Table_2_Name",
 			"Description": "Table 2 Description",
 			"Layout": [
 				{
-					"Name": "Field 1 Name",
+					"Name": "Field_1_Name",
 					"Type": "Integer",
 					"Description": "Explanation of what field 1 is for/contains",
 					"Properties": {
@@ -48,7 +48,7 @@
 				},
 
 				{
-					"Name": "Field 2 Name",
+					"Name": "Field_2_Name",
 					"Type": "VARCHAR2(50)",
 					"Description": "Explanation of what field 2 is for/contains",
 					"Properties": {
@@ -61,7 +61,7 @@
 				},
 
 				{
-					"Name": "Field 3 Name",
+					"Name": "Field_3_Name",
 					"Type": "VARCHAR2(50)",
 					"Description": "Explanation of what field 3 is for/contains",
 					"Properties": {

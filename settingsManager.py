@@ -20,13 +20,14 @@ def exportSettings(settings: dict, exportPath: str = "./settings.json") -> None:
 
 
 # Get settings from database directly (without descriptions)
-def settingsFromDBPath(envPath: str = 'env_data.env') -> dict:
+def settingsFromDBPath(flavor: str, envPath: str = 'env_data.env') -> dict:
     """
     Generate settings from database directly with AI
     
     Note descriptions will be set as an empty string, and will have to be manually explained.
 
     Args:
+        flavor (str): SQL flavor. Currently only 'oracle' or 'postgres' available
         envPath (str): Environment variables .env file path to process connection string
     """
 
@@ -35,26 +36,34 @@ def settingsFromDBPath(envPath: str = 'env_data.env') -> dict:
 
     # Process
     return settingsFromDB(
+        flavor,
         {
             "DB_USER": os.getenv('DB_USER'),
             "DB_PASSWORD": os.getenv('DB_PASSWORD'),
-            "DB_DSN": os.getenv('DB_DSN')
+            "DB_NAME": os.getenv('DB_NAME'),
+            "DB_HOST": os.getenv('DB_HOST'),
+            "DB_PORT": os.getenv('DB_PORT'),
+        } if flavor == 'postgres' else {
+            "DB_USER": os.getenv('DB_USER'),
+            "DB_PASSWORD": os.getenv('DB_PASSWORD'),
+            "DB_DSN": os.getenv('DB_DSN'),
         }
     )
 
 # NOTE: Might have to modify this if using other database provider (not Oracle Database)
-def settingsFromDB(connection: dict[str]) -> dict:
+def settingsFromDB(flavor: str, connection: dict[str]) -> dict:
     """
     Generate settings from database directly with AI. 
     
     Note descriptions will be set as an empty string, and will have to be manually explained.
 
     Args:
+        flavor (str): SQL flavor. Currently only 'oracle' or 'postgres' available
         connection (dict[str]): Connection properties. See README for exact structure
     """
 
     # Connect DB
-    db = Database(connection)
+    db = Database(connection, flavor)
 
     # Get all tables
     tableNames = db.execute("SELECT table_name FROM dba_tables;")
@@ -215,11 +224,11 @@ EXAMPLE_SETTINGS = {
 	"SQL_Flavor": "Oracle Database",
 	"Tables": [
 		{
-			"Name": "Table 1 Name",
+			"Name": "Table_1_Name",
 			"Description": "Table 1 Description",
 			"Layout": [
 				{
-					"Name": "Field 1 Name",
+					"Name": "Field_1_Name",
 					"Type": "String",
 					"Description": "Explanation of what field 1 is for/contains",
 					"Properties": {
@@ -231,7 +240,7 @@ EXAMPLE_SETTINGS = {
 				},
 
 				{
-					"Name": "Field 2 Name",
+					"Name": "Field_2_Name",
 					"Type": "Boolean",
 					"Description": "Explanation of what field 2 is for/contains",
 					"Properties": {
@@ -243,11 +252,11 @@ EXAMPLE_SETTINGS = {
 		},
 
 		{
-			"Name": "Table 2 Name",
+			"Name": "Table_2_Name",
 			"Description": "Table 2 Description",
 			"Layout": [
 				{
-					"Name": "Field 1 Name",
+					"Name": "Field_1_Name",
 					"Type": "Integer",
 					"Description": "Explanation of what field 1 is for/contains",
 					"Properties": {
@@ -259,7 +268,7 @@ EXAMPLE_SETTINGS = {
 				},
 
 				{
-					"Name": "Field 2 Name",
+					"Name": "Field_2_Name",
 					"Type": "VARCHAR2(50)",
 					"Description": "Explanation of what field 2 is for/contains",
 					"Properties": {
@@ -272,7 +281,7 @@ EXAMPLE_SETTINGS = {
 				},
 
 				{
-					"Name": "Field 3 Name",
+					"Name": "Field_3_Name",
 					"Type": "VARCHAR2(50)",
 					"Description": "Explanation of what field 3 is for/contains",
 					"Properties": {

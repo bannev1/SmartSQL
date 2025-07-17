@@ -8,7 +8,7 @@ from settingsManager import findTable
 
 
 class SmartSQL:
-	def __init__(self, settings: dict, envPath: str = 'env_data.env', confirmExecute: bool = True, **kwargs) -> None:
+	def __init__(self, settings: dict, flavor: str, envPath: str = 'env_data.env', confirmExecute: bool = True, **kwargs) -> None:
 		"""
 		Create an instance of the SmartSQL class to create and run queries
 		
@@ -16,6 +16,7 @@ class SmartSQL:
   
 		Args:
 			settings (dict): A dictionary corresponding to the structure of settings.json. See the README or settingsManager.py for more information.
+			flavor (str): SQL flavor. Currently only 'oracle' or 'postgres' available
 			envPath (str): Path to the .env file storing the connection string and API key(Optional)
 			confirmExecute (bool): Will essentially decide if need to output information and ask for confirmation before executing SQL queries.
 		"""
@@ -31,16 +32,20 @@ class SmartSQL:
 			"AZURE_OPENAI_ENDPOINT",
 			"AZURE_OPENAI_DEPLOYMENT_NAME",
 			"DB_USER",
-			"DB_PASSWORD",
-			"DB_DSN"
+			"DB_PASSWORD"
 		]
+
+		if flavor == 'postgres':
+			keys.extend(["DB_NAME", "DB_HOST", "DB_PORT"])
+		elif flavor == 'oracle':
+			keys.extend(["DB_DSN"])
 
 		# Generate key dictionary
 		apiKeys = {key: os.getenv(key, kwargs[key]) for key in keys}
 
 		# Set up connections to AI and database
 		self.ai = Prompter(apiKeys)
-		self.db = Database(apiKeys)
+		self.db = Database(apiKeys, flavor)
 
 		# Set up tables
 		self.settings = settings	
