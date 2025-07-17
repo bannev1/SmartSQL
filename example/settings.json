@@ -1,0 +1,33 @@
+{
+    "Server_Name": "My Server",
+    "Server_Description": "Brief Server Description",
+    "SQL_Flavor": "Oracle Database",
+    "Tables": [ // List of all tables
+        {
+            "Name": "Table 1 Name",
+            "Description": "Table 1 Description",
+            "Layout": [ // List of all fields/columns in table
+                {
+                    "Name": "Field 1 Name",
+                    "Type": "Field 1 Type",
+                    "Description": "Explanation of what field 1 is for/contains",
+                    "Properties": {
+                        "isPrimaryKey": true,
+                        "ForeignReference": "",
+                        "Constraints": "NOT NULL"
+                    }
+                },
+                {
+                    "Name": "Field 2 Name",
+                    "Type": "Field 2 Type",
+                    "Description": "Explanation of what field 2 is for/contains",
+                    "Properties": {
+                        "isPrimaryKey": false,
+                        "ForeignReference": "Table 2 Name",
+                        "Constraints": ""
+                    }
+                }
+            ]
+        }
+    ]
+}
