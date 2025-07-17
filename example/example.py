@@ -12,7 +12,7 @@ SETTINGS_JSON = "./testSettings.json"
 # If need to set settings
 if 'y' in input('Set settings/server information? [Y/N] ').lower():
 	# Get settings from DB directly (multiple ways to approach this)
-	settings = settingsManager.settingsFromDB(envPath=ENV_PATH)
+	settings = settingsManager.settingsFromDBPath(ENV_PATH)
 
 	# Export for modification
 	settingsManager.exportSettings(settings, exportPath=SETTINGS_JSON)
@@ -20,7 +20,7 @@ if 'y' in input('Set settings/server information? [Y/N] ').lower():
 	# Wait for user to go to SETTINGS_JSON and update descriptions/names
 	print(f"Please modify newly updated {SETTINGS_JSON} and add relevant descriptions.")
 
-	while 'y' not in input('Have you updated {SETTINGS_JSON} with correct information? [Y/N] ').lower():
+	while 'y' not in input(f'Have you updated {SETTINGS_JSON} with correct information? [Y/N] ').lower():
 		print(f"Please modify newly updated {SETTINGS_JSON} and add relevant descriptions.\n")
 
 # Otherwise grab settings

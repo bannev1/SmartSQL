@@ -33,7 +33,7 @@ class Prompter:
 		self.deploymentName = APIkeys['AZURE_OPENAI_DEPLOYMENT_NAME']
 
 
-	def prompt(self, basePrompt: str, query: str, temperature: float = 0.8, maxTokens: int = 800) -> str:
+	def prompt(self, basePrompt: str, query: str, temperature: float = 0.8, maxTokens: int = 5000) -> str:
 		"""
 		Helper method to prompt the query to the AI model. Returns result as a string.
 

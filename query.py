@@ -20,7 +20,7 @@ class SmartSQL:
 			debug (bool): Whether to enable development mode. Will essentially output information and ask for confirmation before executing SQL queries.
 		"""
 
-		kwargs = defaultdict(kwargs, str)
+		kwargs = defaultdict(str, kwargs)
 
 		load_dotenv(envPath)
 
@@ -63,7 +63,7 @@ class SmartSQL:
 		"""
 
 		# Base explanation to AI for prompt
-		serverExplanation = f"My database {self.name} is {self.description}. I am using {self.SQLflavor}. Help give solely SQL code to complete the query from the user. Do not output anything other than SQL code.\n"
+		serverExplanation = f"My database {self.name} is {self.description}. I am using {self.SQLflavor}. Help give solely SQL code to complete the query from the user. Do not output anything other than SQL code and do NOT put it in a code block and do NOT add comments. Just raw text.\n"
 		
 		# Set conditional part of prompt
 		if table != None:

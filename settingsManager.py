@@ -15,12 +15,12 @@ def exportSettings(settings: dict, exportPath: str = "./settings.json") -> None:
     """
 
     # Open and export
-    with open(exportPath, 'r+') as file:
-        json.dump(settings, file)
+    with open(exportPath, 'w+') as file:
+        json.dump(settings, file, indent='\t')
 
 
 # Get settings from database directly (without descriptions)
-def settingsFromDB(envPath: str = 'env_data.env') -> dict:
+def settingsFromDBPath(envPath: str = 'env_data.env') -> dict:
     """
     Generate settings from database directly with AI
     
@@ -125,7 +125,7 @@ def settingsFromDB(connection: dict[str]) -> dict:
 
 
 # AI Settings
-def settingsWithAI(details: str, envPath: str) -> dict:
+def settingsWithAIPath(details: str, envPath: str) -> dict:
     """
     Use AI to generate the settings dictionary, given details about database
 
@@ -161,9 +161,9 @@ def settingsWithAI(details: str, apiKeys: dict) -> dict:
 
     ai = Prompter(apiKeys)
 
-    basePrompt = f"Given a description of the database, you should output a JSON file (make sure to not output anything else) similar to the following template for their database.\n\nTemplate: \n{settingsTemplate}"
+    basePrompt = f"Given a description of the database, you should output a JSON file (make sure to not output anything else, and do NOT put it in a code block and do NOT add comments. Just raw text) similar to the following template for their database.\n\nTemplate: \n{settingsTemplate}"
 
-    result = json.loads(ai.prompt(basePrompt, details))
+    result = json.loads(ai.prompt(basePrompt, details).strip())
 
     return result
 
@@ -177,7 +177,8 @@ def parseSettings(settingsPath: str) -> dict:
         settingsPath (str): Path of settings/JSON file
     """
 
-    return json.loads(settingsPath)
+    with open(settingsPath, 'r+') as file:
+        return json.loads('\n'.join(file.readlines()))
 
 
 # Find table from name
