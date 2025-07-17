@@ -1,8 +1,10 @@
+# Run this file from the root of this directory
+
 # IMPORT
 import os
 
 import settingsManager
-from ..query import SmartSQL
+from query import SmartSQL
 
 
 # PREFERENCES

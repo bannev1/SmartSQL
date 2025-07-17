@@ -64,29 +64,6 @@ Example usage:
 
 > See [example.py](example.py) for a full example.
 
-```python
-# Import the class
-from query import SmartSQL
-
-# Define properties
-TABLELAYOUT = {
-    "My table"
-}
-
-# Create instance to connect to database
-processor = SmartSQL()
-```
-
-If you don't want to create a `.env` file, you can also directly pass in the data like the following:
-
-```python
-
-
-```
-
-For full functionality, you can also create a `.json` file (see )
-
-
 ## Contributing
 
 If you want to contribute to this project, please follow the guidelines below:
