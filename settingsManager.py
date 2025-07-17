@@ -195,6 +195,16 @@ def findTable(settings: dict, tableName: str) -> dict:
     return table
 
 
+# Get all tables
+def getAllTables(settings: dict) -> list[str]:
+    """
+    Get a list of all tables available
+
+    Args:
+        settings (dict): Settings dictionary
+    """
+
+    return [i['Name'] for i in settings['Tables']]
 
 
 # EXAMPLE SETTINGS/TEMPLATE

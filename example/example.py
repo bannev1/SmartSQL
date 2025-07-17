@@ -1,10 +1,60 @@
+# IMPORT
+import os
+
 import settingsManager
 from ..query import SmartSQL
 
-tableLayout = {
-			"order_general_info": ""
-		}
 
-exp = SmartSQL(tableLayout, debug=True)
+# PREFERENCES
+ENV_PATH = "../env_data.env"
+SETTINGS_JSON = "./testSettings.json"
 
-print(exp.query(['order_general_info'], "List all the orders of the past month"))
+# If need to set settings
+if 'y' in input('Set settings/server information? [Y/N] ').lower():
+	# Get settings from DB directly (multiple ways to approach this)
+	settings = settingsManager.settingsFromDB(envPath=ENV_PATH)
+
+	# Export for modification
+	settingsManager.exportSettings(settings, exportPath=SETTINGS_JSON)
+
+	# Wait for user to go to SETTINGS_JSON and update descriptions/names
+	print(f"Please modify newly updated {SETTINGS_JSON} and add relevant descriptions.")
+
+	while 'y' not in input('Have you updated {SETTINGS_JSON} with correct information? [Y/N] ').lower():
+		print(f"Please modify newly updated {SETTINGS_JSON} and add relevant descriptions.\n")
+
+# Otherwise grab settings
+else:
+	settings = settingsManager.parseSettings(SETTINGS_JSON)
+
+
+# START QUERIES
+# Create instance of SmartSQL class
+exp = SmartSQL(settings, envPath=ENV_PATH, debug=True)
+
+
+# For validation later, get all tables available
+allTables = settingsManager.getAllTables(settings)
+
+while True:
+	os.system('clear')
+
+	# Get query
+	query = input('Please make a request: ')
+
+	tables = None
+
+	if 'y' in input('Do you know which tables you need to access specifically? [Y/N] '):
+		tables = [table for table in input('Please enter the tables you need separated by a comma (Capitalization is important): ').strip() if table in allTables]
+
+		print(f"Tables referenced which are available in database: {', '.join(tables)}")
+
+	# Execute code
+	result = exp.query(query, tables if tables == None or len(tables) > 0 else None)
+
+	# Output result
+	print(f"Result:\n{'\n'.join(result)}")
+
+	# Exit if user specifies
+	if 'y' not in input('Do you wish to make another query? [Y/N] ').lower():
+		break
