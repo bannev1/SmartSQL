@@ -1,46 +1,31 @@
-# Run this file from the root of this directory
-
 # IMPORT
-import os
-
 import settingsManager
 from query import SmartSQL
 
 
 # PREFERENCES
 ENV_PATH = "./env_data.env"
-SETTINGS_JSON = "./testSettings.json"
+SETTINGS_JSON = "./settings.json"
+SQL_FILE = "./sqlReference.sql"
+DATABASE_PROVIDER = "Oracle Database"
 
 # If need to set settings
-if 'y' in input('Set settings/server information? [Y/N] ').lower():
-	# Get settings from DB directly (multiple ways to approach this)
-	settings = settingsManager.settingsFromDBPath(ENV_PATH)
-
-	# Export for modification
-	settingsManager.exportSettings(settings, exportPath=SETTINGS_JSON)
-
-	# Wait for user to go to SETTINGS_JSON and update descriptions/names
-	print(f"Please modify newly updated {SETTINGS_JSON} and add relevant descriptions.")
-
-	while 'y' not in input(f'Have you updated {SETTINGS_JSON} with correct information? [Y/N] ').lower():
-		print(f"Please modify newly updated {SETTINGS_JSON} and add relevant descriptions.\n")
-
-# Otherwise grab settings
+if 'y' in input('Set settings? [Y/N] ').lower(): 
+	with open(SQL_FILE, 'r+') as file:
+		settings = settingsManager.settingsWithAIPath(f"Using {DATABASE_PROVIDER}\n\n" + '\n'.join(file.readlines()), ENV_PATH)
+		settingsManager.exportSettings(settings, SETTINGS_JSON)
 else:
 	settings = settingsManager.parseSettings(SETTINGS_JSON)
 
-
 # START QUERIES
 # Create instance of SmartSQL class
-exp = SmartSQL(settings, envPath=ENV_PATH)
+exp = SmartSQL(settings, 'postgres', envPath=ENV_PATH, confirmExecute=True)
 
 
 # For validation later, get all tables available
 allTables = settingsManager.getAllTables(settings)
 
 while True:
-	os.system('clear')
-
 	# Get query
 	query = input('Please make a request: ')
 
@@ -50,6 +35,9 @@ while True:
 		tables = [table for table in input('Please enter the tables you need separated by a comma (Capitalization is important): ').strip() if table in allTables]
 
 		print(f"Tables referenced which are available in database: {', '.join(tables)}")
+
+		exp.query(query, tables if tables == None or len(tables) > 0 else None)
+		continue
 
 	# Execute code
 	result = exp.query(query, tables if tables == None or len(tables) > 0 else None)

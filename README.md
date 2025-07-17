@@ -56,10 +56,17 @@ AZURE_OPENAI_DEPLOYMENT_NAME = "AI Model"
 AZURE_AI_KEY = "Azure AI API Key"
 AZURE_AI_ENDPOINT = "Azure AI Endpoint"
 
-# Database Connection String
+# Database Connection String - ORACLE
 DB_USER = "Username"
 DB_PASSWORD = "Password"
-DB_CONN = "dbhost.example.com/mydb"
+DB_DSN = "dbhost.example.com/mydb"
+
+# Database Connection String - POSTGRES
+DB_USER = "Username"
+DB_PASSWORD = "Password"
+DB_NAME = "mydb"
+DB_HOST = "dbhost.example.com"
+DB_PORT = "0000"
 ```
 
 *Make sure to replace the information above with your own.*
@@ -110,8 +117,10 @@ mySmartSQL = SmartSQL(settings,
 
 Additionally, there exists the parameter `confirmExecute` which is a boolean to check whether you wish for the program to output the generated SQL and prompt if it should execute it, essentially as a security check. For example, if this property were `True`, the following:
 
+Also specify `flavor` which is either `'oracle'` or `'postgres'`
+
 ```python
-mySmartSQL = SmartSQL(settings, confirmExecute=True)
+mySmartSQL = SmartSQL(settings, 'oracle', confirmExecute=True)
 
 mySmartSQL.query("Give me a list of all orders made in the past month for this year")
 ```
