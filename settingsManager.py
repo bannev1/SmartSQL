@@ -53,136 +53,236 @@ def settingsFromDBPath(flavor: str, envPath: str = 'env_data.env') -> dict:
 # NOTE: Might have to modify this if using other database provider
 def settingsFromDB(flavor: str, connection: dict[str]) -> dict:
     """
-    Generate settings from database directly with AI. 
+    Generate database schema with detailed constraint information including CHECK conditions.
     
-    Note descriptions will be set as an empty string, and will have to be manually explained.
-
     Args:
-        flavor (str): SQL flavor. Currently only 'oracle' or 'postgres' available
-        connection (dict[str]): Connection properties. See README for exact structure
+        flavor (str): Database flavor - 'oracle' or 'postgres'
+        connection (dict): Connection parameters
+        
+    Returns:
+        dict: Schema structure with tables, columns, and constraints
+        
+    Example Output:
+        {
+            "Server_Name": "",
+            "Server_Description": "",
+            "SQL_Flavor": "PostgreSQL",
+            "Tables": [
+                {
+                    "Name": "employees",
+                    "Description": "",
+                    "Layout": [
+                        {
+                            "Name": "id",
+                            "Type": "integer",
+                            "Description": "",
+                            "Properties": {
+                                "isPrimaryKey": true,
+                                "Foreign_Reference": "",
+                                "Constraints": ["PRIMARY KEY"]
+                            }
+                        },
+                        {
+                            "Name": "age",
+                            "Type": "integer",
+                            "Description": "",
+                            "Properties": {
+                                "isPrimaryKey": false,
+                                "Foreign_Reference": "",
+                                "Constraints": [
+                                    "CHECK (age > 18)",
+                                    "NOT NULL"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
     """
-    
-    # Connect DB
     db = Database(connection, flavor)
-
     tables = []
 
-    if flavor.lower() == 'oracle':
-        # Oracle-specific queries
-        tableNames = db.execute("SELECT table_name FROM dba_tables;")
-        
-        for tableName in tableNames:
-            table = {
-                'Name': tableName,
-                'Description': ''
-            }
-            layout = []
+    try:
+        if flavor.lower() == 'oracle':
+            # Get all user tables
+            tableNames = [row[0] for row in db.execute("SELECT table_name FROM user_tables;")]
             
-            fields = db.execute(f"SELECT column_name, data_type FROM all_tab_cols WHERE table_name = '{tableName}';")[0]
-            
-            primaryKey = db.execute(f"""SELECT column_name FROM all_cons_columns WHERE constraint_name = (
-                                        SELECT constraint_name FROM all_constraints 
-                                        WHERE UPPER(table_name) = UPPER('{tableName}') AND CONSTRAINT_TYPE = 'P'
-                                    );""")[0][0]
-
-            for field in fields:
-                struct = {
-                    'Name': field[0],
-                    'Type': field[1],
-                    'Description': '',
-                }
-
-                constraints = db.execute(f"SELECT constraint_type FROM all_constraints WHERE table_name = '{tableName}';")
-
-                properties = {
-                    'isPrimaryKey': struct['Name'].strip() == primaryKey.strip(),
-                    'Foreign_Reference': '',
-                    'Constraints': []
-                }
-
-                for constraint in constraints:
-                    constraintType = constraint[0]
-                    if constraintType == 'P':
-                        continue
-                    properties["Constraints"].append(constraintType)
+            for tableName in tableNames:
+                table = {'Name': tableName, 'Description': ''}
+                layout = []
                 
-                struct['Properties'] = properties
-                layout.append(struct)
-            
-            table['Layout'] = layout
-            tables.append(table)
-
-    elif flavor.lower() == 'postgres':
-        # PostgreSQL-specific queries
-        tableNames = db.execute("""
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-            AND table_type = 'BASE TABLE';
-        """)
-        
-        for tableName in tableNames:
-            table = {
-                'Name': tableName[0],  # PostgreSQL returns tuples
-                'Description': ''
-            }
-            layout = []
-            
-            # Get columns and data types
-            fields = db.execute(f"""
-                SELECT column_name, data_type 
-                FROM information_schema.columns 
-                WHERE table_name = '{tableName[0]}';
-            """)
-            
-            # Get primary key
-            primaryKey = db.execute(f"""
-                SELECT a.attname
-                FROM pg_index i
-                JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-                WHERE i.indrelid = '{tableName[0]}'::regclass
-                AND i.indisprimary;
-            """)
-            pk_column = primaryKey[0][0] if primaryKey else None
-            
-            for field in fields:
-                struct = {
-                    'Name': field[0],
-                    'Type': field[1],
-                    'Description': '',
-                }
-
-                # Get constraints for this column
-                constraints = db.execute(f"""
-                    SELECT constraint_type 
-                    FROM information_schema.table_constraints
-                    WHERE table_name = '{tableName[0]}'
-                    AND constraint_type != 'PRIMARY KEY';
+                # Get all columns
+                columns = db.execute(f"""
+                    SELECT column_name, data_type, nullable 
+                    FROM user_tab_columns 
+                    WHERE table_name = '{tableName}'
+                    ORDER BY column_id;
                 """)
-
-                properties = {
-                    'isPrimaryKey': struct['Name'].strip() == pk_column.strip() if pk_column else False,
-                    'Foreign_Reference': '',
-                    'Constraints': [c[0] for c in constraints]
-                }
                 
-                struct['Properties'] = properties
-                layout.append(struct)
+                # Get primary key
+                pk_result = db.execute(f"""
+                    SELECT cols.column_name 
+                    FROM user_constraints cons
+                    JOIN user_cons_columns cols ON cons.constraint_name = cols.constraint_name
+                    WHERE cons.table_name = '{tableName}'
+                    AND cons.constraint_type = 'P';
+                """)
+                pk_columns = [row[0] for row in pk_result]
+                
+                # Get all constraints for the table
+                constraints = db.execute(f"""
+                    SELECT c.constraint_name, c.constraint_type, c.search_condition, 
+                           cols.column_name, c.r_constraint_name
+                    FROM user_constraints c
+                    LEFT JOIN user_cons_columns cols ON c.constraint_name = cols.constraint_name
+                    WHERE c.table_name = '{tableName}'
+                    ORDER BY c.constraint_name;
+                """)
+                
+                # Organize constraints by column
+                constraint_map = {col[0]: [] for col in columns}
+                for const in constraints:
+                    const_name, const_type, condition, col_name, r_constraint = const
+                    
+                    if const_type == 'P':
+                        continue  # Already handled with pk_columns
+                    elif const_type == 'R':  # Foreign key
+                        ref_table_result = db.execute(f"""
+                            SELECT table_name 
+                            FROM user_constraints 
+                            WHERE constraint_name = '{r_constraint}';
+                        """)
+                        if ref_table_result:
+                            ref_table = ref_table_result[0][0]
+                            constraint_map[col_name].append(
+                                f"FOREIGN KEY REFERENCES {ref_table}({col_name})"
+                            )
+                    elif const_type == 'U':  # Unique
+                        constraint_map[col_name].append("UNIQUE")
+                    elif const_type == 'C':  # Check
+                        if condition:
+                            constraint_map[col_name].append(f"CHECK ({condition})")
+                    elif const_type == 'O':  # Read only
+                        constraint_map[col_name].append("READ ONLY")
+                
+                # Build column structures
+                for col_name, data_type, nullable in columns:
+                    struct = {
+                        'Name': col_name,
+                        'Type': data_type,
+                        'Description': '',
+                        'Properties': {
+                            'isPrimaryKey': col_name in pk_columns,
+                            'Foreign_Reference': '',
+                            'Constraints': constraint_map.get(col_name, [])
+                        }
+                    }
+                    
+                    # Add NOT NULL if applicable
+                    if nullable == 'N':
+                        struct['Properties']['Constraints'].append("NOT NULL")
+                    
+                    layout.append(struct)
+                
+                table['Layout'] = layout
+                tables.append(table)
+
+        elif flavor.lower() == 'postgres':
+            # Get all user tables
+            tableNames = [row[0] for row in db.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+                AND table_type = 'BASE TABLE';
+            """)]
             
-            table['Layout'] = layout
-            tables.append(table)
+            for tableName in tableNames:
+                table = {'Name': tableName, 'Description': ''}
+                layout = []
+                
+                # Get all columns with nullability
+                columns = db.execute(f"""
+                    SELECT column_name, data_type, is_nullable 
+                    FROM information_schema.columns 
+                    WHERE table_name = '{tableName}'
+                    ORDER BY ordinal_position;
+                """)
+                
+                # Get primary key
+                pk_result = db.execute(f"""
+                    SELECT a.attname
+                    FROM pg_index i
+                    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                    WHERE i.indrelid = '{tableName}'::regclass
+                    AND i.indisprimary;
+                """)
+                pk_columns = [row[0] for row in pk_result]
+                
+                # Get all constraints for the table
+                constraints = db.execute(f"""
+                    SELECT con.conname, con.contype, pg_get_constraintdef(con.oid),
+                           a.attname, confrelid::regclass
+                    FROM pg_constraint con
+                    JOIN pg_class cl ON cl.oid = con.conrelid
+                    LEFT JOIN pg_attribute a ON a.attnum = ANY(con.conkey) AND a.attrelid = con.conrelid
+                    WHERE cl.relname = '{tableName}'
+                    ORDER BY con.conname;
+                """)
+                
+                # Organize constraints by column
+                constraint_map = {col[0]: [] for col in columns}
+                for const in constraints:
+                    const_name, const_type, const_def, col_name, ref_table = const
+                    
+                    if const_type == 'p':
+                        continue  # Primary key already handled
+                    elif const_type == 'f':  # Foreign key
+                        if col_name:
+                            constraint_map[col_name].append(
+                                f"FOREIGN KEY {const_def.split('FOREIGN KEY')[1]}"
+                            )
+                    elif const_type == 'u':  # Unique
+                        if col_name:
+                            constraint_map[col_name].append("UNIQUE")
+                    elif const_type == 'c':  # Check
+                        if col_name:
+                            constraint_map[col_name].append(const_def)
+                
+                # Build column structures
+                for col_name, data_type, is_nullable in columns:
+                    struct = {
+                        'Name': col_name,
+                        'Type': data_type,
+                        'Description': '',
+                        'Properties': {
+                            'isPrimaryKey': col_name in pk_columns,
+                            'Foreign_Reference': '',
+                            'Constraints': constraint_map.get(col_name, [])
+                        }
+                    }
+                    
+                    # Add NOT NULL if applicable
+                    if is_nullable == 'NO':
+                        struct['Properties']['Constraints'].append("NOT NULL")
+                    
+                    layout.append(struct)
+                
+                table['Layout'] = layout
+                tables.append(table)
 
-    else:
-        raise ValueError(f"Unsupported SQL flavor: {flavor}")
+        else:
+            raise ValueError(f"Unsupported SQL flavor: {flavor}")
 
-    settings = {
+    except Exception as e:
+        raise RuntimeError(f"Error generating schema: {str(e)}")
+
+    return {
         'Server_Name': '',
         'Server_Description': '',
         'SQL_Flavor': flavor.capitalize(),
         'Tables': tables
     }
-
-    return settings
 
 
 # AI Settings
