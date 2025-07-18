@@ -3,3 +3,4 @@ dotenv
 oracledb
 psycopg2
 setuptools
+argparse
