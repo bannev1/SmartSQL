@@ -4,7 +4,7 @@
 import os
 
 import src.settingsManager as settingsManager
-from src.query import SmartSQL
+from src import SmartSQL
 
 
 # PREFERENCES

@@ -27,7 +27,6 @@ setuptools.setup(
 	packages=setuptools.find_packages('src'),
 	include_package_data=True,
 	python_requires='>=3.10.0',
-	license_files=('LICENSE', 'COPYING'),
 	install_requires=[
 		"openai>=1.97.0",
 		"dotenv>=0.9.9",
