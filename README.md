@@ -77,6 +77,8 @@ DB_PORT = "0000"
 
 > See [example.py](/example/example.py) for a full example.
 
+You can also use the pre-built CLI wrapper in the [cli.py](/cli.py) file.
+
 ## Functionality
 
 ### SmartSQL Features

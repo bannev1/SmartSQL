@@ -3,8 +3,8 @@
 # IMPORT
 import os
 
-import settingsManager
-from query import SmartSQL
+import src.settingsManager as settingsManager
+from src.query import SmartSQL
 
 
 # PREFERENCES

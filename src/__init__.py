@@ -4,7 +4,7 @@ from collections import defaultdict
 from dotenv import load_dotenv
 
 from Helpers import Prompter, Database
-from settingsManager import findTable
+from src.settingsManager import findTable
 
 
 class SmartSQL:
